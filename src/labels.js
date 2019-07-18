@@ -16,7 +16,7 @@ const fetchLabels = async (data) => {
    */
 const filterToUpdate = async (data) => {
   const { labels } = data
-  const filtered = labels.filter(label => Object.keys(renameTable).includes(label.name))
+  const filtered = labels.filter(label => Object.keys(renameTable).includes(label.name.toLowerCase()))
 
   return { labels, filtered, ...data }
 }
@@ -27,7 +27,7 @@ const filterToUpdate = async (data) => {
    */
 const makeObjectsLabelsToUpdate = async (data) => {
   const labels = data.filtered.map(label => {
-    return { currentName: label.name, ...renameTable[label.name] }
+    return { currentName: label.name, ...renameTable[label.name.toLowerCase()] }
   })
   return { ...data, toUpdate: labels }
 }
