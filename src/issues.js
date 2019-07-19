@@ -1,13 +1,24 @@
 const { changeLabelsTable, axios } = require('./config')
 const { getNextPage } = require('./utils')
+const headers = {
+  Accept: 'application/vnd.github.symmetra-preview+json',
+  'Content-Type': 'application/json'
+}
 
 const fetchIssues = async (data) => {
   // GET /repos/:owner/:repo/issues?state=open&page=1
-  const { owner, repo } = data
+  const { owner, repo, token } = data
   const page = data.page ? data.page : 1
   const issues = data.issues ? data.issues : []
 
-  const response = await axios.get(`/repos/${owner}/${repo}/issues?state=open&page=${page}`)
+  if (!!token) {
+    headers['Authorization'] = `Basic ${token}`
+  }
+
+  const response = await axios.get(`/repos/${owner}/${repo}/issues?state=open&page=${page}`, {
+    headers: headers
+  })
+
   const nextPage = getNextPage(response)
 
   issues.push(...response.data)
@@ -22,7 +33,7 @@ const filterIssuesToUpdateLabels = async (data) => {
 
   const issues = data.issues
     .filter(issue => {
-      const labels = issue.labels.filter(label => forbiddenLabels.includes(label.name))
+      const labels = issue.labels.filter(label => forbiddenLabels.includes(label.name.toLowerCase()))
       return labels.length > 0
     })
 
@@ -31,25 +42,30 @@ const filterIssuesToUpdateLabels = async (data) => {
 
 const updateLabelsOnIssues = async (data) => {
   // PUT /repos/:owner/:repo/issues/:issue_number/labels
-  const { owner, repo } = data
+  const { owner, repo, token } = data
+
+  if (!!token) {
+    headers['Authorization'] = `Basic ${token}`
+  }
 
   const promises = data.issuesToUpdate.map(async (issue) => {
     const currentLabels = issue.labels.map(label => label.name)
     const labels = currentLabels.map(label => {
-      return changeLabelsTable[label] ? changeLabelsTable[label].name : label
+      return changeLabelsTable[label.toLowerCase()] ? changeLabelsTable[label.toLowerCase()].name : label
     })
 
     const response = await axios.put(`/repos/${owner}/${repo}/issues/${issue.number}/labels`, {
       labels: labels
+    }, {
+      headers: headers
     })
 
-    // unnecessary data
-    return response
+    return `#${issue.number} - ${issue.title}, labels ${currentLabels} -> ${labels}`
   })
 
-  await Promise.all(promises)
+  const issuesChanged = await Promise.all(promises)
 
-  return data
+  return { ...data, errors: [], issuesChanged: issuesChanged }
 }
 
 module.exports = {
