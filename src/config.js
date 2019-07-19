@@ -1,14 +1,6 @@
-const TOKEN = process.env.TOKEN ? process.env.TOKEN : ''
-
 const headers = {
-  Authorization: `Basic ${TOKEN}`,
   Accept: 'application/vnd.github.symmetra-preview+json',
   'Content-Type': 'application/json'
-}
-
-// permits GET requests
-if (!TOKEN) {
-  delete headers['Authorization']
 }
 
 const axios = require('axios').create({
